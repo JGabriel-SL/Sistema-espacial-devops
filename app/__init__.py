@@ -1,8 +1,10 @@
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy 
 from flask_restful import Api 
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}}, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 api = Api(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
