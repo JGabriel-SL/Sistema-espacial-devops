@@ -16,25 +16,21 @@ pipeline {
 
         // --- ESTÁGIO DE TESTES COM DOCKER ---
         stage('Unit Tests & Coverage') {
-            // Removemos o 'agent { docker }' para não dar erro de caminho
             steps {
                 script {
-                    echo '🧪 Testando com Docker Manual (Fix Windows)...'
+                    echo '🧪 Testando com Docker Manual (Fix PYTHONPATH)...'
                     
-                    // O PULO DO GATO:
-                    // 1. -v "%WORKSPACE%:/app" -> Mapeia a pasta do Jenkins (Windows) para /app (Linux)
-                    // 2. -w /app -> Diz pro container trabalhar dentro de /app (caminho Linux válido!)
-                    // 3. /bin/sh -c "..." -> Roda os comandos Linux lá dentro
+                    // Mudança: Adicionamos 'export PYTHONPATH=.'
+                    // Isso diz ao Python: "Procure módulos na pasta atual (/app) também"
                     
                     bat """
                         docker run --rm -v "%WORKSPACE%:/app" -w /app python:3.12 ^
-                        /bin/sh -c "pip install -r requirements.txt pytest pytest-cov && pytest tests --cov=app --cov-report=xml:coverage.xml --junitxml=test-results.xml"
+                        /bin/sh -c "export PYTHONPATH=. && pip install -r requirements.txt pytest pytest-cov && pytest tests --cov=app --cov-report=xml:coverage.xml --junitxml=test-results.xml"
                     """
                 }
             }
             post {
                 always {
-                    // O allowEmptyResults evita que o pipeline trave se o teste falhar
                     junit testResults: 'test-results.xml', allowEmptyResults: true
                 }
             }
