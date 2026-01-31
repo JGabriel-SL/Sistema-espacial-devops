@@ -16,30 +16,25 @@ pipeline {
 
         // --- ESTÁGIO DE TESTES COM DOCKER ---
         stage('Unit Tests & Coverage') {
-            agent {
-                docker {
-                    // Usa a imagem oficial do Python
-                    image 'python:3.12'
-                    // Garante que o container use o mesmo workspace do Jenkins
-                    reuseNode true
-                }
-            }
+            // Removemos o 'agent { docker }' para não dar erro de caminho
             steps {
                 script {
-                    echo '🧪 Rodando testes DENTRO do container Python...'
+                    echo '🧪 Testando com Docker Manual (Fix Windows)...'
                     
-                    // Como estamos dentro do container, é Linux/Unix.
-                    // Não usamos 'bat', usamos 'sh'.
-                    // Não precisamos de venv, pois o container é descartável.
+                    // O PULO DO GATO:
+                    // 1. -v "%WORKSPACE%:/app" -> Mapeia a pasta do Jenkins (Windows) para /app (Linux)
+                    // 2. -w /app -> Diz pro container trabalhar dentro de /app (caminho Linux válido!)
+                    // 3. /bin/sh -c "..." -> Roda os comandos Linux lá dentro
                     
-                    sh 'pip install -r requirements.txt pytest pytest-cov'
-                    
-                    // Roda os testes e gera os arquivos no workspace compartilhado
-                    sh 'pytest tests --cov=app --cov-report=xml:coverage.xml --junitxml=test-results.xml'
+                    bat """
+                        docker run --rm -v "%WORKSPACE%:/app" -w /app python:3.12 ^
+                        /bin/sh -c "pip install -r requirements.txt pytest pytest-cov && pytest tests --cov=app --cov-report=xml:coverage.xml --junitxml=test-results.xml"
+                    """
                 }
             }
             post {
                 always {
+                    // O allowEmptyResults evita que o pipeline trave se o teste falhar
                     junit testResults: 'test-results.xml', allowEmptyResults: true
                 }
             }
