@@ -1,0 +1,29 @@
+services:
+  # Sua Aplicação Flask
+  app:
+    container_name: meu-espacial
+    build: .  # Constrói usando o Dockerfile da pasta atual
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mapeia o banco de dados local para dentro do container
+      - ./instance/database.db:/app/instance/database.db
+    restart: always
+
+  # SonarQube (Serviço de Qualidade)
+  sonarqube:
+    image: sonarqube:lts-community
+    container_name: sonarqube2
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonar_data:/opt/sonarqube/data
+      - sonar_extensions:/opt/sonarqube/extensions
+      - sonar_logs:/opt/sonarqube/logs
+    restart: always
+
+# Volumes gerenciados pelo Docker para o Sonar não perder dados
+volumes:
+  sonar_data:
+  sonar_extensions:
+  sonar_logs:
