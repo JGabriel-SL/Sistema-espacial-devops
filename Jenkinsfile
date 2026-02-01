@@ -4,25 +4,36 @@ pipeline {
     environment {
         COMPOSE_PROJECT_NAME = 'sistema-espacial'
         SCANNER_HOME = tool 'sonar-scanner'
+        
+        // Configuração de Versão
+        VERSION_TAG = "v1.0.${BUILD_NUMBER}"
+        GIT_CREDENTIAL_ID = 'git-creds' // Nome da credencial criada no passo acima
     }
 
     stages {
-        stage('Checkout') {
+        stage('1. Checkout') {
             steps {
                 cleanWs()
                 checkout scm
             }
         }
 
-        // --- ESTÁGIO DE TESTES COM DOCKER ---
-        stage('Unit Tests & Coverage') {
+        stage('2. Preparar Infra (Sonar)') {
             steps {
                 script {
-                    echo '🧪 Testando com Docker Manual (Fix PYTHONPATH)...'
-                    
-                    // Mudança: Adicionamos 'export PYTHONPATH=.'
-                    // Isso diz ao Python: "Procure módulos na pasta atual (/app) também"
-                    
+                    echo '🔌 Verificando SonarQube...'
+                    // Sobe o Sonar se não estiver rodando (Idempotente)
+                    bat "docker-compose up -d sonarqube"
+                    sleep 5
+                }
+            }
+        }
+
+        stage('3. Unit Tests (Docker Isolated)') {
+            steps {
+                script {
+                    echo '🧪 Testando aplicação...'
+                    // Roda testes dentro do container Python limpando o PYTHONPATH
                     bat """
                         docker run --rm -v "%WORKSPACE%:/app" -w /app python:3.12 ^
                         /bin/sh -c "export PYTHONPATH=. && pip install -r requirements.txt pytest pytest-cov && pytest tests --cov=app --cov-report=xml:coverage.xml --junitxml=test-results.xml"
@@ -36,17 +47,7 @@ pipeline {
             }
         }
 
-        stage('Preparar Infra (Sonar)') {
-            steps {
-                script {
-                    echo '🔌 Iniciando SonarQube...'
-                    bat "docker-compose up -d sonarqube"
-                    sleep 15
-                }
-            }
-        }
-
-        stage('Análise SonarQube') {
+        stage('4. Análise SonarQube') {
             steps {
                 script {
                     echo '🔍 Analisando qualidade...'
@@ -57,12 +58,74 @@ pipeline {
             }
         }
 
-        stage('Build & Deploy App') {
+        stage('5. Trivy Scan (Repositório)') {
             steps {
                 script {
-                    echo '🚀 Construindo e Subindo a Aplicação...'
+                    echo '🛡️ Escaneando arquivos (Dependências e Código)...'
+                    // Escaneia a pasta atual (%WORKSPACE%) procurando libs inseguras
+                    // severity HIGH,CRITICAL: Só avisa se for grave
+                    // exit-code 0: Não quebra o pipeline (mude para 1 se quiser bloquear)
+                    bat """
+                        docker run --rm -v "%WORKSPACE%:/root/.cache/" -v "%WORKSPACE%:/src" ^
+                        aquasec/trivy fs --severity HIGH,CRITICAL --exit-code 0 /src
+                    """
+                }
+            }
+        }
+
+        stage('6. Build App Image') {
+            steps {
+                script {
+                    echo '🏗️ Construindo Imagem...'
                     bat "docker-compose build app"
-                    bat "docker-compose up -d app"
+                }
+            }
+        }
+
+        stage('7. Trivy Scan (Imagem Docker)') {
+            steps {
+                script {
+                    echo '🛡️ Escaneando a Imagem construída...'
+                    // Precisamos mapear o docker.sock para o Trivy ver as imagens do Host
+                    // O nome da imagem criada pelo compose geralmente é "pasta_app"
+                    bat """
+                        docker run --rm -v //var/run/docker.sock:/var/run/docker.sock ^
+                        aquasec/trivy image --severity HIGH,CRITICAL --exit-code 0 ^
+                        sistema-espacial-app
+                    """
+                }
+            }
+        }
+
+        stage('8. Deploy') {
+            steps {
+                script {
+                    echo '🚀 Deploy (Recriando container da App)...'
+                    bat "docker-compose up -d --force-recreate app"
+                }
+            }
+        }
+
+        stage('9. Git Tag Release') {
+            when {
+                branch 'main' // Só roda se estiver na branch main
+            }
+            steps {
+                script {
+                    echo "🏷️ Criando Tag: ${VERSION_TAG}"
+                    withCredentials([usernamePassword(credentialsId: GIT_CREDENTIAL_ID, usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                        bat """
+                            git config user.email "jenkins@ci.com"
+                            git config user.name "Jenkins CI"
+                            
+                            git tag -a ${VERSION_TAG} -m "Release via Jenkins Build #${BUILD_NUMBER}"
+                            
+                            @REM Seta a URL com a senha para o push funcionar
+                            git remote set-url origin https://%GIT_USER%:%GIT_PASS%@github.com/JGabriel-SL/Sistema-espacial-devops.git
+                            
+                            git push origin ${VERSION_TAG}
+                        """
+                    }
                 }
             }
         }
@@ -70,7 +133,10 @@ pipeline {
 
     post {
         failure {
-            echo '❌ Falha no pipeline.'
+            echo '❌ Pipeline falhou. Verifique os logs.'
+        }
+        success {
+            echo '✅ Pipeline finalizada com Sucesso!'
         }
     }
 }
