@@ -5,9 +5,8 @@ pipeline {
         COMPOSE_PROJECT_NAME = 'sistema-espacial'
         SCANNER_HOME = tool 'sonar-scanner'
         
-        // Configuração de Versão
         VERSION_TAG = "v1.0.${BUILD_NUMBER}"
-        GIT_CREDENTIAL_ID = 'git-creds' // Nome da credencial criada no passo acima
+        GIT_CREDENTIAL_ID = 'git-creds' 
     }
 
     stages {
@@ -22,7 +21,7 @@ pipeline {
             steps {
                 script {
                     echo '🔌 Verificando SonarQube...'
-                    // Sobe o Sonar se não estiver rodando (Idempotente)
+
                     bat "docker-compose up -d sonarqube"
                     sleep 5
                 }
@@ -33,7 +32,7 @@ pipeline {
             steps {
                 script {
                     echo '🧪 Testando aplicação...'
-                    // Roda testes dentro do container Python limpando o PYTHONPATH
+
                     bat """
                         docker run --rm -v "%WORKSPACE%:/app" -w /app python:3.12 ^
                         /bin/sh -c "export PYTHONPATH=. && pip install -r requirements.txt pytest pytest-cov && pytest tests --cov=app --cov-report=xml:coverage.xml --junitxml=test-results.xml"
@@ -62,9 +61,7 @@ pipeline {
             steps {
                 script {
                     echo '🛡️ Escaneando arquivos (Dependências e Código)...'
-                    // Escaneia a pasta atual (%WORKSPACE%) procurando libs inseguras
-                    // severity HIGH,CRITICAL: Só avisa se for grave
-                    // exit-code 0: Não quebra o pipeline (mude para 1 se quiser bloquear)
+                    
                     bat """
                         docker run --rm -v "%WORKSPACE%:/root/.cache/" -v "%WORKSPACE%:/src" ^
                         aquasec/trivy fs --severity HIGH,CRITICAL --exit-code 0 /src
@@ -82,15 +79,14 @@ pipeline {
             }
         }
 
-        stage('7. Trivy Scan (Imagem Docker)') {
+       stage('7. Trivy Scan (Imagem Docker)') {
             steps {
                 script {
-                    echo '🛡️ Escaneando a Imagem construída...'
-                    // Precisamos mapear o docker.sock para o Trivy ver as imagens do Host
-                    // O nome da imagem criada pelo compose geralmente é "pasta_app"
+                    echo '🛡️ Escaneando a Imagem (Modo Rápido)...'
+                    
                     bat """
                         docker run --rm -v //var/run/docker.sock:/var/run/docker.sock ^
-                        aquasec/trivy image --severity HIGH,CRITICAL --exit-code 0 ^
+                        aquasec/trivy image --severity HIGH,CRITICAL --scanners vuln --exit-code 0 ^
                         sistema-espacial-app
                     """
                 }
@@ -108,7 +104,7 @@ pipeline {
 
         stage('9. Git Tag Release') {
             when {
-                branch 'main' // Só roda se estiver na branch main
+                branch 'main' 
             }
             steps {
                 script {
