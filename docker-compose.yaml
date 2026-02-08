@@ -13,7 +13,7 @@ services:
   # SonarQube (Serviço de Qualidade)
   sonarqube:
     image: sonarqube:lts-community
-    container_name: sonarqube2
+    container_name: sonarqube
     ports:
       - "9000:9000"
     volumes:
