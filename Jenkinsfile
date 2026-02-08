@@ -16,7 +16,7 @@ pipeline {
                 checkout scm
             }
         }
-        
+
         stage('3. Unit Tests (Docker Isolated)') {
             steps {
                 script {
@@ -86,6 +86,8 @@ pipeline {
             steps {
                 script {
                     echo '🚀 Deploy (Recriando container da App)...'
+                    bat "docker-compose stop app"
+                    bat "docker-compose rm -f app"
                     bat "docker-compose up -d --force-recreate app"
                 }
             }
