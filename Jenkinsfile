@@ -92,8 +92,7 @@ pipeline {
             steps {
                 script {
                     echo '🚀 Deploy (Recriando container da App)...'
-                    bat "docker-compose stop app"
-                    bat "docker-compose rm -f app"
+                    bat "docker rm -f meu-espacial"
                     bat "docker-compose up -d --force-recreate app"
                 }
             }
