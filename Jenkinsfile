@@ -6,7 +6,7 @@ pipeline {
         SCANNER_HOME = tool 'sonar-scanner'
         
         VERSION_TAG = "v1.0.${BUILD_NUMBER}"
-        GIT_CREDENTIAL_ID = 'git-creds' 
+        GIT_CREDENTIAL_ID = 'token-git-new' 
     }
 
     stages {
