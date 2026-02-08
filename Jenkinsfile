@@ -9,7 +9,7 @@ pipeline {
         GIT_CREDENTIAL_ID = 'git-creds' 
     }
 
-    stages {
+    stages 
         stage('1. Checkout') {
             steps {
                 cleanWs()
@@ -17,7 +17,7 @@ pipeline {
             }
         }
 
-        stage('2. Preparar Infra (Sonar)') {
+      /*   stage('2. Preparar Infra (Sonar)') {
             steps {
                 script {
                     echo '🔌 Verificando SonarQube...'
@@ -25,8 +25,8 @@ pipeline {
                     bat "docker-compose up -d sonarqube"
                     sleep 5
                 }
-            }
-        }
+            } 
+        } */
 
         stage('3. Unit Tests (Docker Isolated)') {
             steps {
@@ -125,7 +125,7 @@ pipeline {
                 }
             }
         }
-    }
+    
 
     post {
         failure {
