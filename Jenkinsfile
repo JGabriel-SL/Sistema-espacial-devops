@@ -9,15 +9,14 @@ pipeline {
         GIT_CREDENTIAL_ID = 'git-creds' 
     }
 
-    stages 
+    stages {
         stage('1. Checkout') {
             steps {
                 cleanWs()
                 checkout scm
             }
         }
-
-
+        
         stage('3. Unit Tests (Docker Isolated)') {
             steps {
                 script {
@@ -115,7 +114,7 @@ pipeline {
                 }
             }
         }
-    
+    }
 
     post {
         failure {
