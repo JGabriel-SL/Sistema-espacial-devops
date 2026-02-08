@@ -17,16 +17,6 @@ pipeline {
             }
         }
 
-      /*   stage('2. Preparar Infra (Sonar)') {
-            steps {
-                script {
-                    echo '🔌 Verificando SonarQube...'
-
-                    bat "docker-compose up -d sonarqube"
-                    sleep 5
-                }
-            } 
-        } */
 
         stage('3. Unit Tests (Docker Isolated)') {
             steps {
