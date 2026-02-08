@@ -99,9 +99,6 @@ pipeline {
         }
 
         stage('9. Git Tag Release') {
-            when {
-                branch 'main' 
-            }
             steps {
                 script {
                     echo "🏷️ Criando Tag: ${VERSION_TAG}"
