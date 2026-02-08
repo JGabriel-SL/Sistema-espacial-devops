@@ -22,7 +22,7 @@ pipeline {
                 script {
                     echo '🔌 Verificando SonarQube...'
 
-                    bat "docker-compose up -d sonarqube2"
+                    bat "docker-compose up -d sonarqube"
                     sleep 5
                 }
             }
