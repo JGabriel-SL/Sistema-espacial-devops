@@ -6,6 +6,7 @@ pipeline {
         SCANNER_HOME = tool 'sonar-scanner'
         
         VERSION_TAG = "v1.0.${BUILD_NUMBER}"
+        TAG_DEPLOY = "v1.0.${BUILD_NUMBER}"
         GIT_CREDENTIAL_ID = 'token-git' 
     }
 
@@ -48,7 +49,6 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
-                    // Lembre-se: Configure no servidor do SonarQube a regra de coverage > 50%
                     waitForQualityGate abortPipeline: true
                 }
             }
@@ -58,7 +58,6 @@ pipeline {
             steps {
                 script {
                     echo '🛡️ Escaneando arquivos do código (Filesystem)...'
-                    // --exit-code 1 garante que FALHA se achar erro CRITICAL (Requisito do trabalho)
                     bat """
                         docker run --rm -v "%WORKSPACE%:/root/.cache/" -v "%WORKSPACE%:/src" ^
                         aquasec/trivy fs --severity HIGH,CRITICAL --exit-code 1 /src
@@ -72,7 +71,6 @@ pipeline {
                 script {
                     echo '🏗️ Construindo Imagem...'
                     bat "docker-compose build app"
-                    // Taggeando para garantir versão correta
                     bat "docker tag sistema-espacial-app sistema-espacial:${VERSION_TAG}"
                 }
             }
