@@ -21,7 +21,6 @@ pipeline {
             steps {
                 script {
                     echo '🧪 Testando aplicação...'
-
                     bat """
                         docker run --rm -v "%WORKSPACE%:/app" -w /app python:3.12 ^
                         /bin/sh -c "export PYTHONPATH=. && pip install -r requirements.txt pytest pytest-cov && pytest tests --cov=app --cov-report=xml:coverage.xml --junitxml=test-results.xml"
@@ -46,14 +45,23 @@ pipeline {
             }
         }
 
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    // Lembre-se: Configure no servidor do SonarQube a regra de coverage > 50%
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
         stage('5. Trivy Scan (Repositório)') {
             steps {
                 script {
-                    echo '🛡️ Escaneando arquivos (Dependências e Código)...'
-                    
+                    echo '🛡️ Escaneando arquivos do código (Filesystem)...'
+                    // --exit-code 1 garante que FALHA se achar erro CRITICAL (Requisito do trabalho)
                     bat """
                         docker run --rm -v "%WORKSPACE%:/root/.cache/" -v "%WORKSPACE%:/src" ^
-                        aquasec/trivy fs --severity HIGH,CRITICAL --exit-code 0 /src
+                        aquasec/trivy fs --severity HIGH,CRITICAL --exit-code 1 /src
                     """
                 }
             }
@@ -64,19 +72,13 @@ pipeline {
                 script {
                     echo '🏗️ Construindo Imagem...'
                     bat "docker-compose build app"
+                    // Taggeando para garantir versão correta
+                    bat "docker tag sistema-espacial-app sistema-espacial:${VERSION_TAG}"
                 }
             }
         }
 
-        stage('8. Deploy') {
-            steps {
-                script {
-                    echo '🚀 Deploy (Recriando container da App)...'
-                    bat "docker rm -f meu-espacial"
-                    bat "docker-compose up -d --force-recreate app"
-                }
-            }
-        }
+      
 
         stage('9. Git Tag Release') {
             steps {
@@ -89,7 +91,7 @@ pipeline {
                             
                             git tag -a ${VERSION_TAG} -m "Release via Jenkins Build #${BUILD_NUMBER}"
                             
-                            @REM Seta a URL com a senha para o push funcionar
+                            @REM Seta a URL com o Token para o push funcionar
                             git remote set-url origin https://%GIT_USER%:%GIT_PASS%@github.com/JGabriel-SL/Sistema-espacial-devops.git
                             
                             git push origin ${VERSION_TAG}
