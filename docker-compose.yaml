@@ -3,6 +3,7 @@ services:
   app:
     container_name: meu-espacial
     build: .  # Constrói usando o Dockerfile da pasta atual
+    image: sistema-espacial:${TAG_DEPLOY}
     ports:
       - "5000:5000"
     volumes:
