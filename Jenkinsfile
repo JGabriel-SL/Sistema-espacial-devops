@@ -72,13 +72,12 @@ pipeline {
                 script {
                     echo '🏗️ Construindo Imagem...'
                     bat "docker-compose build app"
-                    bat "docker tag sistema-espacial-app sistema-espacial:${VERSION_TAG}"
                 }
             }
         }
 
 
-        stage('6. Trivy Scan (Imagem Docker)') {
+       stage('6. Trivy Scan (Imagem Docker)') {
             steps {
                 script {
                     echo '🛡️ Escaneando a Imagem Docker criada...'
@@ -93,7 +92,7 @@ pipeline {
                         --severity HIGH,CRITICAL ^
                         --scanners vuln ^
                         --exit-code 1 ^
-                        sistema-espacial:${TAG_DEPLOY}
+                        sistema-espacial:${TAG_DEPLOY}  
                     """
                 }
             }
