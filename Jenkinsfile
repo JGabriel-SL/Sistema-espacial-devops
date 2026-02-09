@@ -7,6 +7,7 @@ pipeline {
         
         VERSION_TAG = "v1.0.${BUILD_NUMBER}"
         TAG_DEPLOY = "v1.0.${BUILD_NUMBER}"
+        APP_IMAGE = "sistema-espacial-app"
         GIT_CREDENTIAL_ID = 'token-git' 
     }
 
