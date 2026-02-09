@@ -78,10 +78,24 @@ pipeline {
         }
 
 
-        stage('6. Trivy Image Scan') {
+        stage('6. Trivy Scan (Imagem Docker)') {
             steps {
-                echo '🛡️ Verificando vulnerabilidades na imagem...'
-                bat "docker run --rm -v //var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --severity HIGH,CRITICAL --exit-code 1 ${APP_IMAGE}:${env.VERSION_TAG}"
+                script {
+                    echo '🛡️ Escaneando a Imagem Docker criada...'
+                    bat "if not exist trivy_cache mkdir trivy_cache"
+                    
+                    bat """
+                        docker run --rm ^
+                        -v //var/run/docker.sock:/var/run/docker.sock ^
+                        -v "%WORKSPACE%/trivy_cache:/root/.cache/" ^
+                        aquasec/trivy image ^
+                        --timeout 15m ^
+                        --severity HIGH,CRITICAL ^
+                        --scanners vuln ^
+                        --exit-code 1 ^
+                        sistema-espacial:${TAG_DEPLOY}
+                    """
+                }
             }
         }
       
