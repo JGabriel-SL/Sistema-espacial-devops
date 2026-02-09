@@ -17,7 +17,7 @@ pipeline {
             }
         }
 
-        stage('3. Unit Tests (Docker Isolated)') {
+        stage('2. Unit Tests (Docker Isolated)') {
             steps {
                 script {
                     echo '🧪 Testando aplicação...'
@@ -34,7 +34,7 @@ pipeline {
             }
         }
 
-        stage('4. Análise SonarQube') {
+        stage('3. Análise SonarQube') {
             steps {
                 script {
                     echo '🔍 Analisando qualidade...'
@@ -54,7 +54,7 @@ pipeline {
             }
         }
 
-        stage('5. Trivy Scan (Repositório)') {
+        stage('4. Trivy Scan (Repositório)') {
             steps {
                 script {
                     echo '🛡️ Escaneando arquivos do código (Filesystem)...'
@@ -67,7 +67,7 @@ pipeline {
             }
         }
 
-        stage('6. Build App Image') {
+        stage('5. Build App Image') {
             steps {
                 script {
                     echo '🏗️ Construindo Imagem...'
@@ -78,9 +78,16 @@ pipeline {
             }
         }
 
+
+        stage('6. Trivy Image Scan') {
+            steps {
+                echo '🛡️ Verificando vulnerabilidades na imagem...'
+                bat "docker run --rm -v //var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --severity HIGH,CRITICAL --exit-code 1 ${APP_IMAGE}:${env.VERSION_TAG}"
+            }
+        }
       
 
-        stage('9. Git Tag Release') {
+        stage('7. Git Tag Release') {
             steps {
                 script {
                     echo "🏷️ Criando Tag: ${VERSION_TAG}"
